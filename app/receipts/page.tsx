@@ -1,4 +1,5 @@
 import PDFDropZone from '@/components/PDFDropZone'
+import ReceiptsList from '@/components/ReceiptsList'
 import React from 'react'
 
 function Receipts() {
@@ -8,7 +9,7 @@ function Receipts() {
             <PDFDropZone />
 
 
-            {/* <ReceiptsList /> */}
+            <ReceiptsList />
         </div>
     </div>
   )
