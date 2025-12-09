@@ -1,0 +1,417 @@
+"use client";
+
+import { deleteReceipts } from "@/actions/deleteReceipts";
+import { getFileDownloadUrl } from "@/actions/getFileDownloadUrl";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useQuery } from "convex/react";
+import { ChevronLeft, FileText } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { threadId } from "worker_threads";
+
+function Receipt() {
+  const params = useParams<{ id: string }>();
+  const [receiptId, setReceiptId] = useState<Id<"receipts"> | null>(null);
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingDownload, setIsLoadingDownload] = useState(false);
+
+  // Fetch receipt details
+  const receipt = useQuery(
+    api.receipts.getReceiptsById,
+    receiptId ? { id: receiptId } : "skip",
+  );
+
+  // Get file download URL(for the veiw button)
+  const fileId = receipt?.fileId;
+  const downloadURL = useQuery(
+    api.receipts.getReceiptDownlodedUrl,
+    fileId ? { fileId } : "skip",
+  );
+
+  // Function to handle Downloading the PDF useing server action
+  const handleDownload = async () => {
+    if (!receipt || !receipt.fileId) return;
+
+    try {
+      setIsLoadingDownload(true);
+
+      //Call the server action to get download URL
+      const result = await getFileDownloadUrl(receipt.fileId);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      //Create a temporary link and trigger download
+      const link = document.createElement("a");
+      if (result.downloadUrl) {
+        link.href = result.downloadUrl;
+
+        link.download = receipt.fileName || "receipt.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        throw new Error("No download URL found");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error)
+      alert("Failed to download the file. Please try again")
+    } finally {
+      setIsLoadingDownload(false);
+    }
+  };
+
+  // Function to delete receipt using server action
+  const handleDeleteReceipt = async () => {
+    if(!receiptId) return
+
+    if (
+      window.confirm(
+        "Are you sureyou want to delete this receipt? This action cannot be undone." 
+      )
+    ) {
+      try {
+        // Call the server action to delete the receipt
+        const result = await deleteReceipts(receiptId)
+
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        router.push("/")
+      } catch (error) {
+        console.error("Error in deleting receipt:", error)
+      alert("Failed to delete receipt. Please try again")
+      setIsDeleting(false)
+      }
+    }
+  }
+
+
+  //Convert the URL string ID to a Convex ID
+  useEffect(() => {
+    try {
+      const id = params.id as Id<"receipts">;
+      setReceiptId(id);
+    } catch (error) {
+      console.error("Invalid receipt Id:", error);
+      router.push("/");
+    }
+  }, [params.id, router]);
+
+  if (receipt === undefined) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (receipt === null) {
+    return (
+      <div className="container mx-auto py-10 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Receipt Not Found</h1>
+          <p className="mb-6">
+            The receipt you&apos;re looking for dose&apos;t exist or has been
+            removed.
+          </p>
+          <Link
+            href="/"
+            className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Return Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  //Format upload data
+  const uploadData = new Date(receipt.uploadedAt).toLocaleString();
+
+  //Check if receipt has extracted data
+  const hasExtractedData = !!(
+    receipt.merchantName ||
+    receipt.merchantAddress ||
+    receipt.transactionDate ||
+    receipt.transactionAmount
+  );
+
+  return (
+    <div className="container mx-auto py-10 px-4">
+      <div className="max-w-2xl mx-auto">
+        <nav className="mb-6">
+          <Link
+            href="/receipts"
+            className="text-blue-500 hover:underline flex items-center"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Receipts
+          </Link>
+        </nav>
+
+        <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+          <div className="p-6">
+            <div className="flex items-center justify-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 truncate">
+                {receipt.fileDisplayName || receipt.fileName}
+              </h1>
+              <div className="flex items-center">
+                {receipt.status === "pending" ? (
+                  <div className="mr-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-800"></div>
+                  </div>
+                ) : null}
+                <span
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    receipt.status === "pending"
+                      ? "bg-yellow-100 text-yellow-100"
+                      : receipt.status === "processed"
+                        ? "bg-green-100 text-gray-100"
+                        : "bg-red-100 text-red-100"
+                  }`}
+                >
+                  {receipt.status.charAt(0).toUpperCase() +
+                    receipt.status.slice(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/*Information*/}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">
+                File Information
+              </h3>
+              <div className="mt-2 bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Uploaded</p>
+                    <p className="font-medium">{uploadData}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Size</p>
+                    <p className="font-medium">
+                      {formatFileSize(receipt.size)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Type</p>
+                    <p className="font-medium">{receipt.mimeType}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">ID</p>
+                    <p className="font-medium truncate" title={receipt._id}>
+                      {receipt._id.slice(0, 10)}...
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/** Download */}
+              <div className="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <FileText className="h-16 w-16 text-blue-500 mx-auto" />
+                  <p className="mt-4 text-sm text-gray-500">PDF Preview</p>
+                  {downloadURL && (
+                    <a
+                      href={downloadURL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 inline-block"
+                    >
+                      View PDF
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/** Extracted Data Section */}
+            {hasExtractedData && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">Receipt Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/** Merchant Details */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Merchant Information
+                    </h4>
+                    <div className="space-y-2">
+                      {receipt.merchantName && (
+                        <div>
+                          <p className="text-sm text-gray-500">Name</p>
+                          <p className="font-medium">{receipt.merchantName}</p>
+                        </div>
+                      )}
+                      {receipt.merchantAddress && (
+                        <div>
+                          <p className="text-sm text-gray-500">Address</p>
+                          <p className="font-medium">
+                            {receipt.merchantAddress}
+                          </p>
+                        </div>
+                      )}
+                      {receipt.merchantContact && (
+                        <div>
+                          <p className="text-sm text-gray-500">Contact</p>
+                          <p className="font-medium">
+                            {receipt.merchantContact}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/** Tranction Details */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-700 mb-3">
+                      Transaction Details
+                    </h4>
+                    <div className="space-y-2">
+                      {receipt.transactionDate && (
+                        <div>
+                          <p className="text-sm text-gray-500">Date</p>
+                          <p className="font-medium">
+                            {receipt.transactionDate}
+                          </p>
+                        </div>
+                      )}
+                      {receipt.transactionAmount && (
+                        <div>
+                          <p className="text-sm text-gray-500">Amount</p>
+                          <p className="font-medium">
+                            {receipt.transactionAmount} {receipt.currency || ""}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/** Receipts Summary */}
+                {/* {receipt.receiptSummary && ()} */}
+              </div>
+            )}
+            {/** Items Section */}
+
+            {receipt.items && receipt.items.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium text-gray-700 mb-3">
+                  Items ({receipt.items.length})
+                </h4>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead>Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {receipt.items.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">
+                            {item.name}
+                          </TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>
+                            {formatCurrency(item.unitPrice, receipt.currency)}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(item.totalPrice, receipt.currency)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-right">
+                          Total
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(
+                            receipt.items.reduce(
+                              (sum, item) => sum + item.totalPrice,
+                              0,
+                            ),
+                            receipt.currency,
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+              </div>
+            )}
+            {/** Action Section */}
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-sm font-medium text-gray-500 mb-4">Action</h3>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className={`px-4 py-2 bg-white border-gray-300 rounded text-sm text-gray-700 ${
+                    isLoadingDownload
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-gray-50"
+                  }`}
+                  onClick={handleDownload}
+                  disabled={isLoadingDownload || !false}
+                >
+                  {isLoadingDownload ? "Downloading..." : "Download PDF"}
+                </button>
+                <button
+                  className={`px-4 py-2 rounded text-sm ${
+                    isDeleting
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-red-50 border border-red-200 text-red-600 hover:bg-red-100"
+                  }`}
+                  onClick={handleDeleteReceipt}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete receipt"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Receipt;
+
+// Helper function to format file size
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+
+  const k = 1024;
+  const size = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + size[i];
+}
+
+// Helper function to format currency
+function formatCurrency(amount: number, currency: string = ""): string {
+  return `${amount.toFixed(2)}${currency ? ` ${currency}` : ""}`;
+}
