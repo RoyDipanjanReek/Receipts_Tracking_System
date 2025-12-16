@@ -1,51 +1,148 @@
-# Welcome to your Convex + Next.js + Clerk app
+# 🧾 AI Receipt Tracking App
 
-This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
+An AI-powered receipt tracking application that automatically scans uploaded receipts, extracts structured data using AI, and securely stores it in a real-time database. Built with modern web technologies and workflow automation for reliability and scalability.
 
-After the initial setup (<2 minutes) you'll have a working full-stack app using:
+---
 
-- Convex as your backend (database, server logic)
-- [React](https://react.dev/) as your frontend (web page interactivity)
-- [Next.js](https://nextjs.org/) for optimized web hosting and page routing
-- [Tailwind](https://tailwindcss.com/) for building great looking accessible UI
-- [Clerk](https://clerk.com/) for authentication
+## ✨ Features
 
-## Get started
+- 📸 Upload receipt images or PDFs
+- 🤖 AI-powered receipt scanning & data extraction
+- 🧠 Automated background workflows using Inngest
+- 💾 Real-time database storage with Convex
+- 🔐 Secure authentication with Clerk
+- ✅ Schema validation using Zod
+- ⚡ Fast, modern UI with shadcn/ui
+- 🧩 Fully typed with TypeScript
+- 🌐 Built on Next.js App Router
 
-If you just cloned this codebase and didn't use `npm create convex`, run:
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js (App Router)
+- **Database**: Convex
+- **Background Jobs / Workflows**: Inngest
+- **Authentication**: Clerk
+- **UI Components**: shadcn/ui
+- **Validation**: Zod
+- **Language**: TypeScript
+- **AI**: Tool-based AI receipt parsing
+
+---
+
+## 🧠 How It Works
+
+1. User uploads a receipt (image or PDF)
+2. File is securely stored and processed
+3. Inngest triggers an AI workflow
+4. AI scans the receipt and extracts details such as:
+   - Merchant name
+   - Date
+   - Amount
+   - Category
+5. Validated data is saved to Convex database
+6. User can view receipts in real-time
+
+---
+
+## 📂 Project Structure
 
 ```
+├── app/ # Next.js App Router
+├── components/ # UI components (shadcn)
+├── convex/ # Convex schema, queries & mutations
+├── inngest/ # Inngest workflows and agents
+├── lib/ # Utilities and helpers
+├── schemas/ # Zod validation schemas
+├── public/ # Static assets
+└── README.md
+```
+
+---
+
+## 🚀 Getting Started
+
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
+```
+
+### 2️⃣ Install Dependencies
+
+```bash
 npm install
+```
+
+## 3️⃣ Environment Variables
+
+### Create a .env.local file and add the following:
+
+``` env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ="your_next_public_clerk_publishable_key"
+CLERK_SECRET_KEY = "clerk_secret_key"
+CONVEX_DEPLOYMENT = ""
+NEXT_PUBLIC_CONVEX_URL = ""
+INNGEST_EVENT_KEY = ""
+INNGEST_SIGNING_KEY = "" 
+```
+Make sure your Convex, Clerk, and Inngest projects are properly set up.
+
+
+### 4️⃣ Run Convex
+
+``` bash
+npx convex dev
+```
+
+### 5️⃣ Run Inngest Dev Server
+``` bash
+npx inngest dev
+```
+
+### 6️⃣ Start the App
+``` bash
 npm run dev
 ```
 
-If you're reading this README on GitHub and want to use this template, run:
+Open http://localhost:3000 in your browser 🚀
 
-```
-npm create convex@latest -- -t nextjs-clerk
-```
+## 🔐 Authentication
 
-Then:
+Authentication is handled using **Clerk**:
 
-1. Open your app. There should be a "Claim your application" button from Clerk in the bottom right of your app.
-2. Follow the steps to claim your application and link it to this app.
-3. Follow step 3 in the [Convex Clerk onboarding guide](https://docs.convex.dev/auth/clerk#get-started) to create a Convex JWT template.
-4. Uncomment the Clerk provider in `convex/auth.config.ts`
-5. Paste the Issuer URL as `CLERK_JWT_ISSUER_DOMAIN` to your dev deployment environment variable settings on the Convex dashboard (see [docs](https://docs.convex.dev/auth/clerk#configuring-dev-and-prod-instances))
+- Secure sign-up & sign-in
+- User-based receipt ownership
+- Protected routes
 
-If you want to sync Clerk user data via webhooks, check out this [example repo](https://github.com/thomasballinger/convex-clerk-users-table/).
+---
 
-## Learn more
+## 🧪 Validation
 
-To learn more about developing your project with Convex, check out:
+All AI-extracted data is validated using **Zod** before being saved to the database to ensure data integrity and correctness.
 
-- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
-- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
-- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
+---
 
-## Join the community
+## 📌 Use Cases
 
-Join thousands of developers building full-stack apps with Convex:
+- Personal expense tracking
+- Business receipt management
+- Automated bookkeeping
+- Finance & accounting tools
+- AI-powered document processing
 
-- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
-- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
+---
+
+## 🧑‍💻 Author
+
+Built by **Dipanjan Roy**  
+Computer Science Engineering student & full-stack developer  
+Passionate about AI, backend systems, and scalable applications.
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**.
